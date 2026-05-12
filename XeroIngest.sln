@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XeroIngest", "XeroIngest.csproj", "{4446C3B1-D821-6F5C-6B1D-A998761DF87E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4446C3B1-D821-6F5C-6B1D-A998761DF87E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4446C3B1-D821-6F5C-6B1D-A998761DF87E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4446C3B1-D821-6F5C-6B1D-A998761DF87E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4446C3B1-D821-6F5C-6B1D-A998761DF87E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {122359AB-D8C0-433A-89B2-FBC61579EE6F}
+	EndGlobalSection
+EndGlobal
