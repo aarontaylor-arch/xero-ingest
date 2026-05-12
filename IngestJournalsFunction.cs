@@ -51,6 +51,18 @@ namespace XeroIngest
             return DateTime.Parse(xeroDate);
         }
 
+        // Reads TrackingCategories[0].Option from a journal line element
+        private static string GetTrackingRegion(JsonElement line)
+        {
+            if (line.TryGetProperty("TrackingCategories", out var cats) && cats.GetArrayLength() > 0)
+            {
+                var first = cats[0];
+                if (first.TryGetProperty("Option", out var opt))
+                    return opt.GetString();
+            }
+            return null;
+        }
+
         [Function("IngestXroJournalsTimerFunction")]
         public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer)
         {
@@ -187,7 +199,7 @@ namespace XeroIngest
                                 var taxType     = line.TryGetProperty("TaxType",     out var taxT) ? taxT.GetString() : null;
                                 var taxName     = line.TryGetProperty("TaxName",     out var taxN) ? taxN.GetString() : null;
                                 var description = line.TryGetProperty("Description", out var desc) ? desc.GetString() : null;
-                                var region      = line.TryGetProperty("Region",      out var reg)  ? reg.GetString()  : null;
+                                var region      = GetTrackingRegion(line);
 
                                 var upsertLine = @"
                                     MERGE [XroJournalLine] AS target
