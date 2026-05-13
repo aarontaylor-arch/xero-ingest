@@ -51,7 +51,6 @@ namespace XeroIngest
             return DateTime.Parse(xeroDate);
         }
 
-        // Reads TrackingCategories[0].Option from a journal line element
         private static string GetTrackingRegion(JsonElement line)
         {
             if (line.TryGetProperty("TrackingCategories", out var cats) && cats.GetArrayLength() > 0)
@@ -159,6 +158,7 @@ namespace XeroIngest
                         var sourceId      = journal.TryGetProperty("SourceID",   out var srcId)   ? srcId.GetString()   : null;
                         var sourceType    = journal.TryGetProperty("SourceType", out var srcType) ? srcType.GetString() : null;
 
+                        // Upsert XroJournal
                         var upsertJournal = @"
                             MERGE [XroJournal] AS target
                             USING (SELECT @JournalId AS JournalId) AS source
@@ -201,6 +201,7 @@ namespace XeroIngest
                                 var description = line.TryGetProperty("Description", out var desc) ? desc.GetString() : null;
                                 var region      = GetTrackingRegion(line);
 
+                                // Upsert XroJournalLine
                                 var upsertLine = @"
                                     MERGE [XroJournalLine] AS target
                                     USING (SELECT @JournalLineId AS JournalLineId) AS source
@@ -236,6 +237,47 @@ namespace XeroIngest
                                     cmd.Parameters.AddWithValue("@Region",           (object)region      ?? DBNull.Value);
                                     await cmd.ExecuteNonQueryAsync();
                                 }
+
+                                // Upsert XroJournalLineTrackingCategory for each tracking category on this line
+                                // Columns: JournalId, JournalLineIndex, TrackingCategoryIndex, TrackingCategoryId, TrackingCategoryName, TrackingOptionId
+                                if (line.TryGetProperty("TrackingCategories", out var cats))
+                                {
+                                    int catIndex = 0;
+                                    foreach (var cat in cats.EnumerateArray())
+                                    {
+                                        var trackingCategoryId   = cat.TryGetProperty("TrackingCategoryID", out var tcId)   ? tcId.GetString()   : null;
+                                        var trackingCategoryName = cat.TryGetProperty("Name",               out var tcName) ? tcName.GetString() : null;
+                                        var trackingOptionId     = cat.TryGetProperty("TrackingOptionID",   out var toId)   ? toId.GetString()   : null;
+
+                                        var upsertCat = @"
+                                            MERGE [XroJournalLineTrackingCategory] AS target
+                                            USING (SELECT @JournalId AS JournalId, @JournalLineIndex AS JournalLineIndex, @TrackingCategoryIndex AS TrackingCategoryIndex) AS source
+                                            ON target.JournalId = source.JournalId
+                                               AND target.JournalLineIndex = source.JournalLineIndex
+                                               AND target.TrackingCategoryIndex = source.TrackingCategoryIndex
+                                            WHEN MATCHED THEN UPDATE SET
+                                                TrackingCategoryId   = @TrackingCategoryId,
+                                                TrackingCategoryName = @TrackingCategoryName,
+                                                TrackingOptionId     = @TrackingOptionId
+                                            WHEN NOT MATCHED THEN INSERT
+                                                (JournalId, JournalLineIndex, TrackingCategoryIndex, TrackingCategoryId, TrackingCategoryName, TrackingOptionId)
+                                            VALUES
+                                                (@JournalId, @JournalLineIndex, @TrackingCategoryIndex, @TrackingCategoryId, @TrackingCategoryName, @TrackingOptionId);";
+
+                                        using (var cmd = new SqlCommand(upsertCat, conn))
+                                        {
+                                            cmd.Parameters.AddWithValue("@JournalId",             journalId);
+                                            cmd.Parameters.AddWithValue("@JournalLineIndex",       lineIndex);
+                                            cmd.Parameters.AddWithValue("@TrackingCategoryIndex",  catIndex);
+                                            cmd.Parameters.AddWithValue("@TrackingCategoryId",     (object)trackingCategoryId   ?? DBNull.Value);
+                                            cmd.Parameters.AddWithValue("@TrackingCategoryName",   (object)trackingCategoryName ?? DBNull.Value);
+                                            cmd.Parameters.AddWithValue("@TrackingOptionId",       (object)trackingOptionId     ?? DBNull.Value);
+                                            await cmd.ExecuteNonQueryAsync();
+                                        }
+                                        catIndex++;
+                                    }
+                                }
+
                                 lineIndex++;
                                 totalLines++;
                             }
